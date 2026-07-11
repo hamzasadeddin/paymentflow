@@ -1,0 +1,55 @@
+<a routerLink="/customers" class="back-link">
+  <span class="material-symbols-outlined">arrow_back</span> Customers
+</a>
+
+<div class="pf-card form-card">
+  <h2>New customer</h2>
+  <p class="pf-muted">Create an individual or business customer. Accounts can be added afterwards.</p>
+
+  <form [formGroup]="form" (ngSubmit)="submit()">
+    <mat-form-field appearance="outline">
+      <mat-label>Customer type</mat-label>
+      <mat-select formControlName="type">
+        <mat-option [value]="1">Individual</mat-option>
+        <mat-option [value]="2">Business</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Name</mat-label>
+      <input matInput formControlName="name" placeholder="Full name or business name" />
+      @if (form.controls.name.hasError('required')) { <mat-error>Name is required</mat-error> }
+      @if (form.controls.name.hasError('server')) { <mat-error>{{ form.controls.name.getError('server') }}</mat-error> }
+    </mat-form-field>
+
+    <div class="row">
+      <mat-form-field appearance="outline">
+        <mat-label>Email</mat-label>
+        <input matInput type="email" formControlName="email" />
+        @if (form.controls.email.hasError('email')) { <mat-error>Enter a valid email</mat-error> }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Phone</mat-label>
+        <input matInput formControlName="phoneNumber" />
+      </mat-form-field>
+    </div>
+
+    <mat-form-field appearance="outline" class="country">
+      <mat-label>Country code</mat-label>
+      <input matInput formControlName="countryCode" maxlength="2" placeholder="e.g. US" style="text-transform: uppercase" />
+      @if (form.controls.countryCode.hasError('minlength') || form.controls.countryCode.hasError('maxlength')) {
+        <mat-error>Use a 2-letter code</mat-error>
+      }
+    </mat-form-field>
+
+    @if (error() && !error()?.fieldErrors) {
+      <p class="pf-error-text" role="alert">{{ error()?.title }}</p>
+    }
+
+    <div class="actions">
+      <button mat-stroked-button type="button" routerLink="/customers">Cancel</button>
+      <button mat-flat-button color="primary" type="submit" [disabled]="saving()">Create customer</button>
+    </div>
+  </form>
+</div>

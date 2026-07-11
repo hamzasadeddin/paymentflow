@@ -1,0 +1,35 @@
+.back-link {
+  display: inline-flex; align-items: center; gap: 4px; color: var(--pf-text-muted);
+  text-decoration: none; font-size: 13px; margin-bottom: 16px;
+}
+.back-link:hover { color: var(--pf-accent); }
+.back-link .material-symbols-outlined { font-size: 18px; }
+
+.detail-header { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.title-row { display: flex; align-items: center; gap: 12px; }
+.title-row h2 { margin: 0; }
+.meta { margin-top: 6px; color: var(--pf-text-muted); display: flex; gap: 8px; align-items: center; font-size: 13px; }
+.meta .dot { opacity: 0.5; }
+.contact { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.contact div { display: flex; align-items: center; gap: 6px; }
+.contact .material-symbols-outlined { font-size: 18px; color: var(--pf-text-muted); }
+
+.section-header { display: flex; justify-content: space-between; align-items: baseline; margin: 24px 0 12px; }
+.section-header h3 { margin: 0; }
+
+.account-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.account-card { animation: rise 180ms ease both; }
+.account-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.balance { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.small { font-size: 12px; }
+.account-meta { margin-top: 14px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.account-meta .pf-muted { margin-right: 6px; }
+
+.mono { font-family: 'SFMono-Regular', Consolas, monospace; }
+.skeleton-block { height: 120px; border-radius: 8px; background: #eef1f5; animation: pulse 1.3s ease-in-out infinite; }
+.state-block { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 40px; text-align: center; color: var(--pf-text-muted); }
+.state-block .material-symbols-outlined { font-size: 40px; opacity: 0.6; }
+.state-block.error .material-symbols-outlined { color: var(--pf-danger); opacity: 1; }
+
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }

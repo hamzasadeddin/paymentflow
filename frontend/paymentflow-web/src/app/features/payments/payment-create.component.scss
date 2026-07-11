@@ -1,0 +1,12 @@
+.back-link {
+  display: inline-flex; align-items: center; gap: 4px; color: var(--pf-text-muted);
+  text-decoration: none; font-size: 13px; margin-bottom: 16px;
+}
+.back-link:hover { color: var(--pf-accent); }
+.back-link .material-symbols-outlined { font-size: 18px; }
+
+.form-card { max-width: 640px; }
+.form-card h2 { margin: 0 0 4px; }
+form { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+.actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 8px; }
+.suffix { color: var(--pf-text-muted); font-size: 13px; }

@@ -1,0 +1,65 @@
+/* PaymentFlow design tokens: calm, high-trust operations console.
+   Slate/navy chrome, white work surface, single teal-blue accent. */
+:root {
+  --pf-bg: #f4f6f9;
+  --pf-surface: #ffffff;
+  --pf-sidebar: #10203a;
+  --pf-sidebar-text: #c6d2e4;
+  --pf-accent: #1465c0;
+  --pf-accent-soft: #e5effa;
+  --pf-text: #1c2733;
+  --pf-text-muted: #5b6b7d;
+  --pf-danger: #b3261e;
+  --pf-success: #1e7f4f;
+  --pf-warning: #9a6700;
+  --pf-border: #dde4ec;
+  --pf-radius: 10px;
+}
+
+html, body { height: 100%; margin: 0; }
+body {
+  font-family: 'Inter', 'Segoe UI', Roboto, sans-serif;
+  background: var(--pf-bg);
+  color: var(--pf-text);
+  font-size: 14px;
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  vertical-align: middle;
+}
+
+.pf-card {
+  background: var(--pf-surface);
+  border: 1px solid var(--pf-border);
+  border-radius: var(--pf-radius);
+  padding: 24px;
+}
+
+.pf-muted { color: var(--pf-text-muted); }
+
+.pf-error-text {
+  color: var(--pf-danger);
+  font-size: 13px;
+}
+
+/* Respect reduced motion globally. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Snackbar tones for beneficiary actions */
+.pf-snack-ok {
+  --mdc-snackbar-container-color: #123b26;
+  --mdc-snackbar-supporting-text-color: #ffffff;
+  --mat-snack-bar-button-color: #8fe0b3;
+}
+.pf-snack-error {
+  --mdc-snackbar-container-color: #5b1512;
+  --mdc-snackbar-supporting-text-color: #ffffff;
+  --mat-snack-bar-button-color: #f4b4ae;
+}

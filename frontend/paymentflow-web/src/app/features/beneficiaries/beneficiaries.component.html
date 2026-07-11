@@ -1,0 +1,118 @@
+<div class="page-header">
+  <div>
+    <h2>Beneficiaries</h2>
+    <p class="pf-muted">Payees available for payments, with maker-checker approval.</p>
+  </div>
+</div>
+
+<div class="pf-card">
+  <div class="toolbar">
+    <mat-form-field appearance="outline" class="search">
+      <mat-label>Search</mat-label>
+      <input matInput [ngModel]="search()" (ngModelChange)="search.set($event)"
+             (keyup.enter)="applyFilters()" placeholder="Name or bank" />
+      <span matSuffix class="material-symbols-outlined">search</span>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="status">
+      <mat-label>Status</mat-label>
+      <mat-select [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event); applyFilters()">
+        <mat-option [value]="''">All</mat-option>
+        <mat-option [value]="1">Draft</mat-option>
+        <mat-option [value]="2">Pending approval</mat-option>
+        <mat-option [value]="3">Approved</mat-option>
+        <mat-option [value]="4">Rejected</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <button mat-stroked-button (click)="applyFilters()">Apply</button>
+  </div>
+
+  @switch (state()) {
+    @case ('loading') {
+      <div class="skeleton-table">
+        @for (row of [1,2,3,4,5]; track row) { <div class="skeleton-row"></div> }
+      </div>
+    }
+    @case ('error') {
+      <div class="state-block error">
+        <span class="material-symbols-outlined">error</span>
+        <p>{{ error()?.title ?? 'Could not load beneficiaries.' }}</p>
+        <button mat-stroked-button (click)="load()">Retry</button>
+      </div>
+    }
+    @case ('empty') {
+      <div class="state-block">
+        <span class="material-symbols-outlined">contacts</span>
+        <p>No beneficiaries match your filters.</p>
+      </div>
+    }
+    @default {
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Beneficiary</th>
+            <th>Account</th>
+            <th>Bank</th>
+            <th>Currency</th>
+            <th>Status</th>
+            <th class="right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (b of beneficiaries(); track b.id) {
+            <tr>
+              <td class="primary">{{ b.name }}</td>
+              <td><pf-masked-value [maskedValue]="b.maskedNumber" /></td>
+              <td>{{ b.bankName ?? '—' }}</td>
+              <td>{{ b.currency }}</td>
+              <td>
+                <pf-status-chip [label]="statusDisplay(b.status).label" [tone]="statusDisplay(b.status).tone" />
+              </td>
+              <td class="right">
+                @if (canManage() || canApprove()) {
+                  <button mat-icon-button [matMenuTriggerFor]="menu" aria-label="Actions">
+                    <span class="material-symbols-outlined">more_vert</span>
+                  </button>
+                  <mat-menu #menu="matMenu">
+                    @if (canManage() && (b.status === BeneficiaryStatus.Draft || b.status === BeneficiaryStatus.Rejected)) {
+                      <button mat-menu-item (click)="submit(b)">
+                        <span class="material-symbols-outlined">send</span> Submit for approval
+                      </button>
+                    }
+                    @if (canApprove() && b.status === BeneficiaryStatus.PendingApproval) {
+                      <button mat-menu-item (click)="review(b, 'approve')">
+                        <span class="material-symbols-outlined">check_circle</span> Approve
+                      </button>
+                      <button mat-menu-item (click)="review(b, 'reject')">
+                        <span class="material-symbols-outlined">cancel</span> Reject
+                      </button>
+                    }
+                    @if (!canManage() && !canApprove()) {
+                      <button mat-menu-item disabled>No actions available</button>
+                    }
+                  </mat-menu>
+                } @else {
+                  <span class="pf-muted">—</span>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      <div class="pagination">
+        <span class="pf-muted">{{ totalCount() }} beneficiary(ies)</span>
+        <div class="pager">
+          <button mat-icon-button [disabled]="page() === 1" (click)="changePage(-1)" aria-label="Previous page">
+            <span class="material-symbols-outlined">chevron_left</span>
+          </button>
+          <span>Page {{ page() }} of {{ totalPages() }}</span>
+          <button mat-icon-button [disabled]="page() >= totalPages()" (click)="changePage(1)" aria-label="Next page">
+            <span class="material-symbols-outlined">chevron_right</span>
+          </button>
+        </div>
+      </div>
+    }
+  }
+</div>

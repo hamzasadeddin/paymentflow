@@ -1,0 +1,67 @@
+<a routerLink="/customers" class="back-link">
+  <span class="material-symbols-outlined">arrow_back</span> Customers
+</a>
+
+@switch (state()) {
+  @case ('loading') {
+    <div class="pf-card"><div class="skeleton-block"></div></div>
+  }
+  @case ('error') {
+    <div class="pf-card state-block error">
+      <span class="material-symbols-outlined">error</span>
+      <p>{{ error()?.title ?? 'Could not load this customer.' }}</p>
+    </div>
+  }
+  @default {
+    @if (customer(); as c) {
+      <div class="detail-header pf-card">
+        <div>
+          <div class="title-row">
+            <h2>{{ c.name }}</h2>
+            <pf-status-chip [label]="statusDisplay(c.status).label" [tone]="statusDisplay(c.status).tone" />
+          </div>
+          <div class="meta">
+            <span class="mono">{{ c.customerReference }}</span>
+            <span class="dot">·</span>
+            <span>{{ typeLabel(c.type) }}</span>
+            @if (c.countryCode) { <span class="dot">·</span> <span>{{ c.countryCode }}</span> }
+          </div>
+        </div>
+        <div class="contact">
+          @if (c.email) { <div><span class="material-symbols-outlined">mail</span> {{ c.email }}</div> }
+          @if (c.phoneNumber) { <div><span class="material-symbols-outlined">call</span> {{ c.phoneNumber }}</div> }
+        </div>
+      </div>
+
+      <div class="section-header">
+        <h3>Payment accounts</h3>
+        <span class="pf-muted">{{ c.accounts.length }} account(s)</span>
+      </div>
+
+      @if (c.accounts.length === 0) {
+        <div class="pf-card state-block">
+          <span class="material-symbols-outlined">account_balance_wallet</span>
+          <p>No accounts yet for this customer.</p>
+        </div>
+      } @else {
+        <div class="account-grid">
+          @for (account of c.accounts; track account.id) {
+            <div class="pf-card account-card">
+              <div class="account-top">
+                <pf-masked-value [maskedValue]="account.maskedNumber" />
+                <pf-status-chip [label]="accountStatusDisplay(account.status).label"
+                                [tone]="accountStatusDisplay(account.status).tone" />
+              </div>
+              <div class="balance">{{ formatMoney(account.availableBalance, account.currency) }}</div>
+              <div class="pf-muted small">Available · {{ account.currency }}</div>
+              <div class="account-meta">
+                <div><span class="pf-muted">Ledger</span> {{ formatMoney(account.ledgerBalance, account.currency) }}</div>
+                <div><span class="pf-muted">Daily limit</span> {{ formatMoney(account.dailyLimit, account.currency) }}</div>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    }
+  }
+}
