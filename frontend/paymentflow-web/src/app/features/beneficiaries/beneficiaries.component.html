@@ -3,6 +3,11 @@
     <h2>Beneficiaries</h2>
     <p class="pf-muted">Payees available for payments, with maker-checker approval.</p>
   </div>
+  @if (canManage()) {
+    <a mat-flat-button color="primary" routerLink="/beneficiaries/new">
+      <span class="material-symbols-outlined">add</span> New beneficiary
+    </a>
+  }
 </div>
 
 <div class="pf-card">

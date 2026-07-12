@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using PaymentFlow.Application.Abstractions;
+using PaymentFlow.Infrastructure.Approvals;
 using PaymentFlow.Infrastructure.Identity;
 using PaymentFlow.Infrastructure.Persistence;
 
@@ -74,9 +75,14 @@ public static class DependencyInjection
 
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<IIdentityService, IdentityService>();
+        services.AddScoped<IUserLookupService, UserLookupService>();
 
         services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<PaymentFlowDbContext>());
         services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
+
+        services.Configure<ApprovalPolicyOptions>(
+            configuration.GetSection(ApprovalPolicyOptions.SectionName));
+        services.AddScoped<IApprovalPolicyProvider, ApprovalPolicyProvider>();
 
         return services;
     }

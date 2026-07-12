@@ -19,7 +19,8 @@ public record CreatePaymentCommand(
     decimal Amount,
     string Currency,
     string? Description,
-    string? IdempotencyKey)
+    string? IdempotencyKey,
+    string? CreatedByUserId)
     : IRequest<Result<PaymentDto>>;
 
 public sealed class CreatePaymentCommandValidator : AbstractValidator<CreatePaymentCommand>
@@ -90,6 +91,7 @@ public sealed class CreatePaymentCommandHandler(IApplicationDbContext db, IDateT
             Currency = currency,
             Description = request.Description?.Trim(),
             IdempotencyKey = idempotencyKey,
+            CreatedByUserId = string.IsNullOrWhiteSpace(request.CreatedByUserId) ? null : request.CreatedByUserId,
             CreatedAtUtc = clock.UtcNow
         };
 

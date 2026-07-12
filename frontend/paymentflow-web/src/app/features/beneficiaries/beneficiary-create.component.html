@@ -1,0 +1,85 @@
+<a routerLink="/beneficiaries" class="back-link">
+  <span class="material-symbols-outlined">arrow_back</span> Beneficiaries
+</a>
+
+<div class="pf-card form-card">
+  <h2>New beneficiary</h2>
+  <p class="pf-muted">Create a payee for a customer. It starts as a draft and must be approved before it can be paid.</p>
+
+  <form [formGroup]="form" (ngSubmit)="submit()">
+    <mat-form-field appearance="outline">
+      <mat-label>Customer</mat-label>
+      <mat-select formControlName="customerId">
+        @for (c of customerList(); track c.id) {
+          <mat-option [value]="c.id">{{ c.name }} ({{ c.customerReference }})</mat-option>
+        }
+      </mat-select>
+      @if (form.controls.customerId.hasError('required') && form.controls.customerId.touched) {
+        <mat-error>Select a customer</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Beneficiary name</mat-label>
+      <input matInput formControlName="name" placeholder="e.g. Acme Supplies Ltd" />
+      @if (form.controls.name.hasError('required') && form.controls.name.touched) {
+        <mat-error>Enter a name</mat-error>
+      }
+      @if (form.controls.name.hasError('server')) {
+        <mat-error>{{ form.controls.name.getError('server') }}</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Account number</mat-label>
+      <input matInput formControlName="accountNumber" placeholder="Destination account number" />
+      @if (form.controls.accountNumber.hasError('required') && form.controls.accountNumber.touched) {
+        <mat-error>Enter an account number</mat-error>
+      }
+      @if (form.controls.accountNumber.hasError('minlength') && form.controls.accountNumber.touched) {
+        <mat-error>Account number looks too short</mat-error>
+      }
+      @if (form.controls.accountNumber.hasError('server')) {
+        <mat-error>{{ form.controls.accountNumber.getError('server') }}</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Currency</mat-label>
+      <mat-select formControlName="currency">
+        @for (code of currencies; track code) {
+          <mat-option [value]="code">{{ code }}</mat-option>
+        }
+      </mat-select>
+      @if (form.controls.currency.hasError('required') && form.controls.currency.touched) {
+        <mat-error>Select a currency</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Bank name (optional)</mat-label>
+      <input matInput formControlName="bankName" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Bank identifier / SWIFT (optional)</mat-label>
+      <input matInput formControlName="bankIdentifierCode" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Country code (optional)</mat-label>
+      <input matInput formControlName="countryCode" placeholder="e.g. US" maxlength="2" />
+    </mat-form-field>
+
+    @if (error()) {
+      <p class="form-error">{{ error()?.title ?? 'Could not create the beneficiary.' }}</p>
+    }
+
+    <div class="actions">
+      <a mat-stroked-button routerLink="/beneficiaries">Cancel</a>
+      <button mat-flat-button color="primary" type="submit" [disabled]="saving()">
+        {{ saving() ? 'Creating…' : 'Create beneficiary' }}
+      </button>
+    </div>
+  </form>
+</div>

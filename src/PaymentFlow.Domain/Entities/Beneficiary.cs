@@ -16,6 +16,9 @@ public class Beneficiary : AuditableEntity
     public string Currency { get; set; } = "USD";
     public string? CountryCode { get; set; }
 
+    /// <summary>The maker: the user who created this beneficiary. Used to block self-approval.</summary>
+    public string? CreatedByUserId { get; set; }
+
     public BeneficiaryStatus Status { get; private set; } = BeneficiaryStatus.Draft;
     public string? ReviewedByUserId { get; private set; }
     public DateTime? ReviewedAtUtc { get; private set; }

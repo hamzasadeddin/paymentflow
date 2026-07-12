@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using PaymentFlow.Api.Extensions;
 using PaymentFlow.Application.Abstractions;
 using PaymentFlow.Application.Common.Paging;
+using PaymentFlow.Application.Features.Approvals;
 using PaymentFlow.Application.Features.Payments;
 using PaymentFlow.Domain.Entities;
 
@@ -56,7 +57,8 @@ public sealed class PaymentsController(ISender sender, ICurrentUserService curre
 
         var result = await sender.Send(
             new CreatePaymentCommand(request.SourceAccountId, request.BeneficiaryId,
-                request.Amount, request.Currency, request.Description, idempotencyKey),
+                request.Amount, request.Currency, request.Description, idempotencyKey,
+                currentUser.UserId?.ToString()),
             cancellationToken);
 
         return result.IsSuccess
@@ -80,7 +82,7 @@ public sealed class PaymentsController(ISender sender, ICurrentUserService curre
         Guid paymentId, ReviewPaymentRequest request, CancellationToken cancellationToken)
         => (await sender.Send(
             new TransitionPaymentCommand(paymentId, PaymentReviewAction.Approve,
-                currentUser.UserId?.ToString(), request.Notes),
+                currentUser.UserId?.ToString(), currentUser.Email, request.Notes),
             cancellationToken)).ToActionResult(this);
 
     [HttpPost("{paymentId:guid}/reject")]
@@ -89,6 +91,11 @@ public sealed class PaymentsController(ISender sender, ICurrentUserService curre
         Guid paymentId, ReviewPaymentRequest request, CancellationToken cancellationToken)
         => (await sender.Send(
             new TransitionPaymentCommand(paymentId, PaymentReviewAction.Reject,
-                currentUser.UserId?.ToString(), request.Notes),
+                currentUser.UserId?.ToString(), currentUser.Email, request.Notes),
             cancellationToken)).ToActionResult(this);
+
+    [HttpGet("{paymentId:guid}/approvals")]
+    [Authorize(Policy = AuthorizationPolicies.CanReadOperations)]
+    public async Task<IActionResult> GetApprovals(Guid paymentId, CancellationToken cancellationToken)
+        => (await sender.Send(new GetPaymentApprovalsQuery(paymentId), cancellationToken)).ToActionResult(this);
 }

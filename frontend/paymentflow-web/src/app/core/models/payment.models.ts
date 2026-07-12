@@ -20,6 +20,8 @@ export interface Payment {
   currency: string;
   status: PaymentStatus;
   description?: string;
+  createdByUserId?: string;
+  requiredApprovals: number;
   reviewNotes?: string;
   reviewedAtUtc?: string;
   failureReason?: string;

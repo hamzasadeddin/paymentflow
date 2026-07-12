@@ -40,6 +40,17 @@ public class Payment : AuditableEntity
     /// <summary>Client-supplied (or server-defaulted) key that makes creation idempotent.</summary>
     public string IdempotencyKey { get; set; } = string.Empty;
 
+    /// <summary>The maker: the user who raised this payment. Used to block self-approval.</summary>
+    public string? CreatedByUserId { get; set; }
+
+    /// <summary>
+    /// Number of distinct approvers required before this payment can reach
+    /// <see cref="PaymentStatus.Approved"/>. Resolved from the approval policy
+    /// and stamped at submit time, so a later threshold change never re-scopes an
+    /// in-flight payment. 0 means the payment auto-approves on submit.
+    /// </summary>
+    public int RequiredApprovals { get; private set; }
+
     public PaymentStatus Status { get; private set; } = PaymentStatus.Draft;
 
     public string? ReviewedByUserId { get; private set; }
@@ -53,11 +64,20 @@ public class Payment : AuditableEntity
 
     // ---------- Lifecycle transitions ----------
 
-    public void SubmitForApproval(DateTime utcNow)
+    /// <summary>
+    /// Moves a draft payment to <see cref="PaymentStatus.PendingApproval"/> and
+    /// locks in how many approvals it will require (resolved from the approval
+    /// policy by the caller). The status flip to Approved still happens only via
+    /// <see cref="Approve"/>, once the required number of approvals is reached.
+    /// </summary>
+    public void SubmitForApproval(int requiredApprovals, DateTime utcNow)
     {
         if (Status != PaymentStatus.Draft)
             throw new InvalidOperationException($"Cannot submit a payment in status {Status}.");
+        if (requiredApprovals < 0)
+            throw new InvalidOperationException("Required approvals cannot be negative.");
 
+        RequiredApprovals = requiredApprovals;
         Status = PaymentStatus.PendingApproval;
         Touch(utcNow);
     }

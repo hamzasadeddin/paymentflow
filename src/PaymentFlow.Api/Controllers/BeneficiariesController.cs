@@ -41,7 +41,8 @@ public sealed class BeneficiariesController(ISender sender, ICurrentUserService 
     {
         var result = await sender.Send(
             new CreateBeneficiaryCommand(request.CustomerId, request.Name, request.AccountNumber,
-                request.BankName, request.BankIdentifierCode, request.Currency, request.CountryCode),
+                request.BankName, request.BankIdentifierCode, request.Currency, request.CountryCode,
+                currentUser.UserId?.ToString()),
             cancellationToken);
         return result.IsSuccess
             ? CreatedAtAction(nameof(GetBeneficiary), new { beneficiaryId = result.Value.Id, version = "1.0" }, result.Value)
@@ -64,7 +65,8 @@ public sealed class BeneficiariesController(ISender sender, ICurrentUserService 
     [Authorize(Policy = AuthorizationPolicies.CanManageBeneficiaries)]
     public async Task<IActionResult> SubmitForApproval(Guid beneficiaryId, CancellationToken cancellationToken)
         => (await sender.Send(
-            new TransitionBeneficiaryCommand(beneficiaryId, BeneficiaryTransition.Submit, currentUser.UserId?.ToString(), null),
+            new TransitionBeneficiaryCommand(beneficiaryId, BeneficiaryTransition.Submit,
+                currentUser.UserId?.ToString(), currentUser.Email, null),
             cancellationToken)).ToActionResult(this);
 
     [HttpPost("{beneficiaryId:guid}/approve")]
@@ -72,7 +74,8 @@ public sealed class BeneficiariesController(ISender sender, ICurrentUserService 
     public async Task<IActionResult> Approve(
         Guid beneficiaryId, ReviewBeneficiaryRequest request, CancellationToken cancellationToken)
         => (await sender.Send(
-            new TransitionBeneficiaryCommand(beneficiaryId, BeneficiaryTransition.Approve, currentUser.UserId?.ToString(), request.Notes),
+            new TransitionBeneficiaryCommand(beneficiaryId, BeneficiaryTransition.Approve,
+                currentUser.UserId?.ToString(), currentUser.Email, request.Notes),
             cancellationToken)).ToActionResult(this);
 
     [HttpPost("{beneficiaryId:guid}/reject")]
@@ -80,6 +83,7 @@ public sealed class BeneficiariesController(ISender sender, ICurrentUserService 
     public async Task<IActionResult> Reject(
         Guid beneficiaryId, ReviewBeneficiaryRequest request, CancellationToken cancellationToken)
         => (await sender.Send(
-            new TransitionBeneficiaryCommand(beneficiaryId, BeneficiaryTransition.Reject, currentUser.UserId?.ToString(), request.Notes),
+            new TransitionBeneficiaryCommand(beneficiaryId, BeneficiaryTransition.Reject,
+                currentUser.UserId?.ToString(), currentUser.Email, request.Notes),
             cancellationToken)).ToActionResult(this);
 }

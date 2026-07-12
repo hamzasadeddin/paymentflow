@@ -13,6 +13,8 @@ public record PaymentDto(
     string Currency,
     PaymentStatus Status,
     string? Description,
+    string? CreatedByUserId,
+    int RequiredApprovals,
     string? ReviewNotes,
     DateTime? ReviewedAtUtc,
     string? FailureReason,
@@ -39,7 +41,8 @@ internal static class PaymentMapping
         new(p.Id, p.PaymentReference, p.SourceAccountId,
             p.SourceAccount?.MaskedNumber ?? string.Empty,
             p.BeneficiaryId, p.Beneficiary?.Name ?? string.Empty,
-            p.Amount, p.Currency, p.Status, p.Description, p.ReviewNotes, p.ReviewedAtUtc,
+            p.Amount, p.Currency, p.Status, p.Description,
+            p.CreatedByUserId, p.RequiredApprovals, p.ReviewNotes, p.ReviewedAtUtc,
             p.FailureReason, p.CreatedAtUtc, p.UpdatedAtUtc,
             Convert.ToBase64String(p.RowVersion));
 }

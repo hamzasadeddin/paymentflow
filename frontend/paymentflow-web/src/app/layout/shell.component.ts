@@ -112,7 +112,7 @@ export class ShellComponent {
     { label: 'Customers', icon: 'group', route: '/customers', enabled: true },
     { label: 'Beneficiaries', icon: 'contacts', route: '/beneficiaries', enabled: true },
     { label: 'Payments', icon: 'payments', route: '/payments', enabled: true },
-    { label: 'Approvals', icon: 'task_alt', route: '/approvals', enabled: false },
+    { label: 'Approvals', icon: 'task_alt', route: '/approvals', enabled: true },
     { label: 'Compliance', icon: 'policy', route: '/compliance', enabled: false },
     { label: 'Reconciliation', icon: 'balance', route: '/reconciliation', enabled: false },
     { label: 'Audit logs', icon: 'history', route: '/audit-logs', enabled: false },

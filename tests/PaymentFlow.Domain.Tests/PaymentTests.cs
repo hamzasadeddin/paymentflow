@@ -22,8 +22,23 @@ public class PaymentTests
     public void Submit_moves_draft_to_pending()
     {
         var p = NewPayment();
-        p.SubmitForApproval(DateTime.UtcNow);
+        p.SubmitForApproval(1, DateTime.UtcNow);
         Assert.Equal(PaymentStatus.PendingApproval, p.Status);
+    }
+
+    [Fact]
+    public void Submit_stamps_required_approvals()
+    {
+        var p = NewPayment();
+        p.SubmitForApproval(2, DateTime.UtcNow);
+        Assert.Equal(2, p.RequiredApprovals);
+    }
+
+    [Fact]
+    public void Submit_rejects_negative_required_approvals()
+    {
+        var p = NewPayment();
+        Assert.Throws<InvalidOperationException>(() => p.SubmitForApproval(-1, DateTime.UtcNow));
     }
 
     [Fact]
@@ -37,7 +52,7 @@ public class PaymentTests
     public void Approve_records_reviewer()
     {
         var p = NewPayment();
-        p.SubmitForApproval(DateTime.UtcNow);
+        p.SubmitForApproval(1, DateTime.UtcNow);
         p.Approve("reviewer-1", "cleared", DateTime.UtcNow);
 
         Assert.Equal(PaymentStatus.Approved, p.Status);
@@ -61,7 +76,7 @@ public class PaymentTests
         Assert.Equal(PaymentStatus.Cancelled, draft.Status);
 
         var approved = NewPayment();
-        approved.SubmitForApproval(DateTime.UtcNow);
+        approved.SubmitForApproval(1, DateTime.UtcNow);
         approved.Approve("r", null, DateTime.UtcNow);
         Assert.Throws<InvalidOperationException>(() => approved.Cancel(DateTime.UtcNow));
     }
@@ -70,7 +85,7 @@ public class PaymentTests
     public void Full_happy_path_reaches_completed()
     {
         var p = NewPayment();
-        p.SubmitForApproval(DateTime.UtcNow);
+        p.SubmitForApproval(1, DateTime.UtcNow);
         p.Approve("r", null, DateTime.UtcNow);
         p.MarkProcessing(DateTime.UtcNow);
         p.Complete(DateTime.UtcNow);
@@ -83,7 +98,7 @@ public class PaymentTests
         var p = NewPayment();
         Assert.Throws<InvalidOperationException>(() => p.Fail("early", DateTime.UtcNow));
 
-        p.SubmitForApproval(DateTime.UtcNow);
+        p.SubmitForApproval(1, DateTime.UtcNow);
         p.Approve("r", null, DateTime.UtcNow);
         p.MarkProcessing(DateTime.UtcNow);
         p.Fail("network timeout", DateTime.UtcNow);
@@ -96,7 +111,7 @@ public class PaymentTests
     public void Cannot_process_an_unapproved_payment()
     {
         var p = NewPayment();
-        p.SubmitForApproval(DateTime.UtcNow);
+        p.SubmitForApproval(1, DateTime.UtcNow);
         Assert.Throws<InvalidOperationException>(() => p.MarkProcessing(DateTime.UtcNow));
     }
 }

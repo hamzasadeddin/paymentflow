@@ -8,7 +8,7 @@ public class PaymentValidatorTests
     private readonly CreatePaymentCommandValidator _validator = new();
 
     private static CreatePaymentCommand Command(decimal amount = 100m, string currency = "USD") =>
-        new(Guid.NewGuid(), Guid.NewGuid(), amount, currency, "Invoice", null);
+        new(Guid.NewGuid(), Guid.NewGuid(), amount, currency, "Invoice", null, null);
 
     [Fact]
     public void Valid_command_passes()
@@ -29,5 +29,5 @@ public class PaymentValidatorTests
     [Fact]
     public void Empty_source_account_fails()
         => Assert.False(_validator.Validate(
-            new CreatePaymentCommand(Guid.Empty, Guid.NewGuid(), 100m, "USD", null, null)).IsValid);
+            new CreatePaymentCommand(Guid.Empty, Guid.NewGuid(), 100m, "USD", null, null, null)).IsValid);
 }

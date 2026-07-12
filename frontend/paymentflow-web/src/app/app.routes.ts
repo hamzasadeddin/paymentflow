@@ -39,8 +39,16 @@ export const routes: Routes = [
       {
         path: 'payments/new',
         loadComponent: () => import('./features/payments/payment-create.component').then(m => m.PaymentCreateComponent)
+      },
+      {
+        path: 'beneficiaries/new',
+        loadComponent: () => import('./features/beneficiaries/beneficiary-create.component').then(m => m.BeneficiaryCreateComponent)
+      },
+      {
+        path: 'approvals',
+        loadComponent: () => import('./features/approvals/approvals.component').then(m => m.ApprovalsComponent)
       }
-      // Future phases: approvals, compliance, reconciliation, audit-logs, admin.
+      // Future phases: compliance, reconciliation, audit-logs, admin.
     ]
   },
   { path: '**', redirectTo: '' }

@@ -9,7 +9,8 @@ namespace PaymentFlow.Application.Features.Payments;
 // ---------- Submit ----------
 public record SubmitPaymentCommand(Guid PaymentId) : IRequest<Result<PaymentDto>>;
 
-public sealed class SubmitPaymentCommandHandler(IApplicationDbContext db, IDateTimeProvider clock)
+public sealed class SubmitPaymentCommandHandler(
+    IApplicationDbContext db, IDateTimeProvider clock, IApprovalPolicyProvider policy)
     : IRequestHandler<SubmitPaymentCommand, Result<PaymentDto>>
 {
     public async Task<Result<PaymentDto>> Handle(
@@ -27,22 +28,69 @@ public sealed class SubmitPaymentCommandHandler(IApplicationDbContext db, IDateT
             return Result.Failure<PaymentDto>(Error.Conflict("payment.beneficiaryNotApproved",
                 "The beneficiary must be approved before this payment can be submitted."));
 
-        // Fail-fast funds/limit check (authoritative reservation happens at approve).
+        // Fail-fast funds/limit check (authoritative reservation happens on final approval).
         var fundsError = await PaymentGuards.CheckDebitableAsync(
             db, payment.SourceAccount!, payment, clock.UtcNow, cancellationToken);
         if (fundsError is not null)
             return Result.Failure<PaymentDto>(fundsError);
 
+        // Resolve and stamp how many approvers this payment needs, from the policy.
+        var requirement = policy.Resolve(payment.Amount);
+
         try
         {
-            payment.SubmitForApproval(clock.UtcNow);
+            payment.SubmitForApproval(requirement.RequiredApprovals, clock.UtcNow);
         }
         catch (InvalidOperationException ex)
         {
             return Result.Failure<PaymentDto>(Error.Conflict("payment.invalidTransition", ex.Message));
         }
 
-        await db.SaveChangesAsync(cancellationToken);
+        // Auto-approve band: below the threshold, the payment clears on submit —
+        // funds are reserved immediately and it is stamped as an auto decision.
+        if (requirement.AutoApproves)
+        {
+            var account = payment.SourceAccount!;
+            try
+            {
+                account.Reserve(payment.Amount);
+                account.Touch(clock.UtcNow);
+                payment.Approve(ApprovalDecision.AutoApprover,
+                    "Auto-approved (below approval threshold).", clock.UtcNow);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Result.Failure<PaymentDto>(Error.Conflict("payment.invalidTransition", ex.Message));
+            }
+
+            db.ApprovalDecisions.Add(new ApprovalDecision
+            {
+                SubjectType = ApprovalSubjectType.Payment,
+                SubjectId = payment.Id,
+                ApproverUserId = ApprovalDecision.AutoApprover,
+                Decision = ApprovalOutcome.Approved,
+                Notes = "Auto-approved (below approval threshold).",
+                DecidedAtUtc = clock.UtcNow
+            });
+            db.SecurityAuditEvents.Add(new SecurityAuditEvent
+            {
+                EventType = SecurityEventTypes.PaymentApproved,
+                Succeeded = true,
+                Details = $"{payment.PaymentReference} auto-approved (amount below approval threshold).",
+                OccurredAtUtc = clock.UtcNow
+            });
+        }
+
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Result.Failure<PaymentDto>(Error.Conflict("payment.concurrencyConflict",
+                "The payment or account was modified by someone else. Reload and try again."));
+        }
+
         return Result.Success(payment.ToDto());
     }
 }
@@ -78,11 +126,12 @@ public sealed class CancelPaymentCommandHandler(IApplicationDbContext db, IDateT
     }
 }
 
-// ---------- Approve / Reject ----------
+// ---------- Approve / Reject (maker-checker approval engine) ----------
 public enum PaymentReviewAction { Approve, Reject }
 
 public record TransitionPaymentCommand(
-    Guid PaymentId, PaymentReviewAction Action, string? ReviewerUserId, string? Notes)
+    Guid PaymentId, PaymentReviewAction Action,
+    string? ReviewerUserId, string? ReviewerEmail, string? Notes)
     : IRequest<Result<PaymentDto>>;
 
 public sealed class TransitionPaymentCommandHandler(IApplicationDbContext db, IDateTimeProvider clock)
@@ -99,36 +148,86 @@ public sealed class TransitionPaymentCommandHandler(IApplicationDbContext db, ID
         if (payment is null)
             return Result.Failure<PaymentDto>(Error.NotFound("payment.notFound", "Payment not found."));
 
-        var reviewer = request.ReviewerUserId ?? "system";
+        // The approver's identity must be known for separation of duties to hold.
+        if (string.IsNullOrWhiteSpace(request.ReviewerUserId))
+            return Result.Failure<PaymentDto>(Error.Forbidden("payment.unknownReviewer",
+                "The approver identity could not be determined."));
 
-        try
+        var reviewer = request.ReviewerUserId;
+
+        // Separation of duties: the maker can never be a checker.
+        if (!string.IsNullOrEmpty(payment.CreatedByUserId)
+            && string.Equals(payment.CreatedByUserId, reviewer, StringComparison.Ordinal))
+            return Result.Failure<PaymentDto>(Error.Forbidden("payment.selfApprovalNotAllowed",
+                "You cannot approve or reject a payment you created (separation of duties)."));
+
+        if (request.Action == PaymentReviewAction.Reject)
         {
-            if (request.Action == PaymentReviewAction.Reject)
+            try
             {
                 payment.Reject(reviewer, request.Notes, clock.UtcNow);
             }
-            else
+            catch (InvalidOperationException ex)
             {
-                // Approve reserves funds — re-check the guards at approval time,
-                // then debit AvailableBalance before flipping the status.
-                if (payment.Beneficiary is { Status: not BeneficiaryStatus.Approved })
-                    return Result.Failure<PaymentDto>(Error.Conflict("payment.beneficiaryNotApproved",
-                        "The beneficiary must be approved before this payment can be approved."));
+                return Result.Failure<PaymentDto>(Error.Conflict("payment.invalidTransition", ex.Message));
+            }
 
+            RecordDecision(payment.Id, reviewer, request.ReviewerEmail, ApprovalOutcome.Rejected, request.Notes);
+            AuditDecision(payment, reviewer, request.ReviewerEmail, approved: false);
+        }
+        else
+        {
+            if (payment.Status != PaymentStatus.PendingApproval)
+                return Result.Failure<PaymentDto>(Error.Conflict("payment.invalidTransition",
+                    $"Cannot approve a payment in status {payment.Status}."));
+
+            if (payment.Beneficiary is { Status: not BeneficiaryStatus.Approved })
+                return Result.Failure<PaymentDto>(Error.Conflict("payment.beneficiaryNotApproved",
+                    "The beneficiary must be approved before this payment can be approved."));
+
+            // No approver may count twice toward dual control.
+            var priorApprovers = await db.ApprovalDecisions
+                .Where(d => d.SubjectType == ApprovalSubjectType.Payment
+                            && d.SubjectId == payment.Id
+                            && d.Decision == ApprovalOutcome.Approved)
+                .Select(d => d.ApproverUserId)
+                .ToListAsync(cancellationToken);
+
+            if (priorApprovers.Contains(reviewer, StringComparer.Ordinal))
+                return Result.Failure<PaymentDto>(Error.Conflict("payment.alreadyApprovedByUser",
+                    "You have already approved this payment."));
+
+            RecordDecision(payment.Id, reviewer, request.ReviewerEmail, ApprovalOutcome.Approved, request.Notes);
+            AuditDecision(payment, reviewer, request.ReviewerEmail, approved: true);
+
+            var distinctApprovals = priorApprovers.Distinct(StringComparer.Ordinal).Count() + 1;
+            var required = Math.Max(payment.RequiredApprovals, 1);
+
+            if (distinctApprovals >= required)
+            {
+                // Final approval: re-check funds, then reserve and flip to Approved.
                 var account = payment.SourceAccount!;
                 var fundsError = await PaymentGuards.CheckDebitableAsync(
                     db, account, payment, clock.UtcNow, cancellationToken);
                 if (fundsError is not null)
                     return Result.Failure<PaymentDto>(fundsError);
 
-                account.Reserve(payment.Amount);
-                account.Touch(clock.UtcNow);
-                payment.Approve(reviewer, request.Notes, clock.UtcNow);
+                try
+                {
+                    account.Reserve(payment.Amount);
+                    account.Touch(clock.UtcNow);
+                    payment.Approve(reviewer, request.Notes, clock.UtcNow);
+                }
+                catch (InvalidOperationException ex)
+                {
+                    return Result.Failure<PaymentDto>(Error.Conflict("payment.invalidTransition", ex.Message));
+                }
             }
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Result.Failure<PaymentDto>(Error.Conflict("payment.invalidTransition", ex.Message));
+            else
+            {
+                // Partial approval: stays PendingApproval until a distinct approver finalizes.
+                payment.Touch(clock.UtcNow);
+            }
         }
 
         try
@@ -143,4 +242,29 @@ public sealed class TransitionPaymentCommandHandler(IApplicationDbContext db, ID
 
         return Result.Success(payment.ToDto());
     }
+
+    private void RecordDecision(
+        Guid paymentId, string approverUserId, string? approverEmail,
+        ApprovalOutcome outcome, string? notes)
+        => db.ApprovalDecisions.Add(new ApprovalDecision
+        {
+            SubjectType = ApprovalSubjectType.Payment,
+            SubjectId = paymentId,
+            ApproverUserId = approverUserId,
+            ApproverEmail = approverEmail,
+            Decision = outcome,
+            Notes = notes,
+            DecidedAtUtc = clock.UtcNow
+        });
+
+    private void AuditDecision(Payment payment, string approverUserId, string? approverEmail, bool approved)
+        => db.SecurityAuditEvents.Add(new SecurityAuditEvent
+        {
+            UserId = Guid.TryParse(approverUserId, out var id) ? id : null,
+            Email = approverEmail,
+            EventType = approved ? SecurityEventTypes.PaymentApproved : SecurityEventTypes.PaymentRejected,
+            Succeeded = true,
+            Details = $"{payment.PaymentReference} {(approved ? "approved" : "rejected")}.",
+            OccurredAtUtc = clock.UtcNow
+        });
 }

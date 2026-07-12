@@ -11,7 +11,8 @@ namespace PaymentFlow.Application.Features.Beneficiaries;
 // ---------- Create ----------
 public record CreateBeneficiaryCommand(
     Guid CustomerId, string Name, string AccountNumber, string? BankName,
-    string? BankIdentifierCode, string Currency, string? CountryCode)
+    string? BankIdentifierCode, string Currency, string? CountryCode,
+    string? CreatedByUserId)
     : IRequest<Result<BeneficiaryDto>>;
 
 public sealed class CreateBeneficiaryCommandValidator : AbstractValidator<CreateBeneficiaryCommand>
@@ -54,6 +55,7 @@ public sealed class CreateBeneficiaryCommandHandler(IApplicationDbContext db, ID
             BankIdentifierCode = request.BankIdentifierCode?.Trim().ToUpperInvariant(),
             Currency = request.Currency.ToUpperInvariant(),
             CountryCode = request.CountryCode?.ToUpperInvariant(),
+            CreatedByUserId = string.IsNullOrWhiteSpace(request.CreatedByUserId) ? null : request.CreatedByUserId,
             CreatedAtUtc = clock.UtcNow
         };
 
@@ -127,7 +129,8 @@ public sealed class UpdateBeneficiaryCommandHandler(IApplicationDbContext db, ID
 public enum BeneficiaryTransition { Submit, Approve, Reject }
 
 public record TransitionBeneficiaryCommand(
-    Guid BeneficiaryId, BeneficiaryTransition Transition, string? ReviewerUserId, string? Notes)
+    Guid BeneficiaryId, BeneficiaryTransition Transition,
+    string? ReviewerUserId, string? ReviewerEmail, string? Notes)
     : IRequest<Result<BeneficiaryDto>>;
 
 public sealed class TransitionBeneficiaryCommandHandler(IApplicationDbContext db, IDateTimeProvider clock)
@@ -142,6 +145,21 @@ public sealed class TransitionBeneficiaryCommandHandler(IApplicationDbContext db
         if (beneficiary is null)
             return Result.Failure<BeneficiaryDto>(Error.NotFound("beneficiary.notFound", "Beneficiary not found."));
 
+        var isReview = request.Transition is BeneficiaryTransition.Approve or BeneficiaryTransition.Reject;
+
+        // Separation of duties on approve/reject: the maker can never be the checker.
+        if (isReview)
+        {
+            if (string.IsNullOrWhiteSpace(request.ReviewerUserId))
+                return Result.Failure<BeneficiaryDto>(Error.Forbidden("beneficiary.unknownReviewer",
+                    "The approver identity could not be determined."));
+
+            if (!string.IsNullOrEmpty(beneficiary.CreatedByUserId)
+                && string.Equals(beneficiary.CreatedByUserId, request.ReviewerUserId, StringComparison.Ordinal))
+                return Result.Failure<BeneficiaryDto>(Error.Forbidden("beneficiary.selfApprovalNotAllowed",
+                    "You cannot approve or reject a beneficiary you created (separation of duties)."));
+        }
+
         try
         {
             switch (request.Transition)
@@ -150,10 +168,10 @@ public sealed class TransitionBeneficiaryCommandHandler(IApplicationDbContext db
                     beneficiary.SubmitForApproval(clock.UtcNow);
                     break;
                 case BeneficiaryTransition.Approve:
-                    beneficiary.Approve(request.ReviewerUserId ?? "system", request.Notes, clock.UtcNow);
+                    beneficiary.Approve(request.ReviewerUserId!, request.Notes, clock.UtcNow);
                     break;
                 case BeneficiaryTransition.Reject:
-                    beneficiary.Reject(request.ReviewerUserId ?? "system", request.Notes, clock.UtcNow);
+                    beneficiary.Reject(request.ReviewerUserId!, request.Notes, clock.UtcNow);
                     break;
             }
         }
@@ -161,6 +179,31 @@ public sealed class TransitionBeneficiaryCommandHandler(IApplicationDbContext db
         {
             // Domain guards rejected the transition -> 409, not a 500.
             return Result.Failure<BeneficiaryDto>(Error.Conflict("beneficiary.invalidTransition", ex.Message));
+        }
+
+        // Record the decision + a security audit event for approve/reject.
+        if (isReview)
+        {
+            var approved = request.Transition == BeneficiaryTransition.Approve;
+            db.ApprovalDecisions.Add(new ApprovalDecision
+            {
+                SubjectType = ApprovalSubjectType.Beneficiary,
+                SubjectId = beneficiary.Id,
+                ApproverUserId = request.ReviewerUserId!,
+                ApproverEmail = request.ReviewerEmail,
+                Decision = approved ? ApprovalOutcome.Approved : ApprovalOutcome.Rejected,
+                Notes = request.Notes,
+                DecidedAtUtc = clock.UtcNow
+            });
+            db.SecurityAuditEvents.Add(new SecurityAuditEvent
+            {
+                UserId = Guid.TryParse(request.ReviewerUserId, out var uid) ? uid : null,
+                Email = request.ReviewerEmail,
+                EventType = approved ? SecurityEventTypes.BeneficiaryApproved : SecurityEventTypes.BeneficiaryRejected,
+                Succeeded = true,
+                Details = $"Beneficiary {beneficiary.Name} {(approved ? "approved" : "rejected")}.",
+                OccurredAtUtc = clock.UtcNow
+            });
         }
 
         await db.SaveChangesAsync(cancellationToken);

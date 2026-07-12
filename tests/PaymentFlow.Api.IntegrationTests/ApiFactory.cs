@@ -42,7 +42,11 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
                 ["Jwt:Secret"] = "integration-test-jwt-secret-0123456789-0123456789-0123456789-0123456789",
                 ["Jwt:Issuer"] = "PaymentFlow",
                 ["Jwt:Audience"] = "PaymentFlow.Web",
-                ["Seed:DemoPassword"] = DemoPassword
+                ["Seed:DemoPassword"] = DemoPassword,
+                // Pin approval thresholds so tests are deterministic: every payment
+                // needs >= 1 approver (no auto band), and >= 5000 needs two.
+                ["ApprovalPolicy:AutoApproveBelow"] = "0",
+                ["ApprovalPolicy:DualApprovalAtOrAbove"] = "5000"
             }));
 
         builder.ConfigureServices(services =>

@@ -21,4 +21,9 @@ public static class SecurityEventTypes
     public const string TokenRefreshed = "TokenRefreshed";
     public const string TokenReplayDetected = "TokenReplayDetected";
     public const string Logout = "Logout";
+
+    public const string PaymentApproved = "PaymentApproved";
+    public const string PaymentRejected = "PaymentRejected";
+    public const string BeneficiaryApproved = "BeneficiaryApproved";
+    public const string BeneficiaryRejected = "BeneficiaryRejected";
 }

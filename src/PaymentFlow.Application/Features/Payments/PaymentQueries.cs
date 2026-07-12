@@ -67,7 +67,8 @@ public sealed class GetPaymentsQueryHandler(IApplicationDbContext db)
             .Select(p => new PaymentRow(
                 p.Id, p.PaymentReference, p.SourceAccountId, p.SourceAccount!.AccountNumber,
                 p.BeneficiaryId, p.Beneficiary!.Name, p.Amount, p.Currency, p.Status,
-                p.Description, p.ReviewNotes, p.ReviewedAtUtc, p.FailureReason,
+                p.Description, p.CreatedByUserId, p.RequiredApprovals,
+                p.ReviewNotes, p.ReviewedAtUtc, p.FailureReason,
                 p.CreatedAtUtc, p.UpdatedAtUtc, p.RowVersion))
             .ToListAsync(cancellationToken);
 
@@ -79,7 +80,8 @@ public sealed class GetPaymentsQueryHandler(IApplicationDbContext db)
         new(r.Id, r.PaymentReference, r.SourceAccountId,
             MaskingUtilities.MaskAccountNumber(r.SourceAccountNumber),
             r.BeneficiaryId, r.BeneficiaryName, r.Amount, r.Currency, r.Status,
-            r.Description, r.ReviewNotes, r.ReviewedAtUtc, r.FailureReason,
+            r.Description, r.CreatedByUserId, r.RequiredApprovals,
+            r.ReviewNotes, r.ReviewedAtUtc, r.FailureReason,
             r.CreatedAtUtc, r.UpdatedAtUtc, Convert.ToBase64String(r.RowVersion));
 }
 
@@ -96,7 +98,8 @@ public sealed class GetPaymentByIdQueryHandler(IApplicationDbContext db)
             .Select(p => new PaymentRow(
                 p.Id, p.PaymentReference, p.SourceAccountId, p.SourceAccount!.AccountNumber,
                 p.BeneficiaryId, p.Beneficiary!.Name, p.Amount, p.Currency, p.Status,
-                p.Description, p.ReviewNotes, p.ReviewedAtUtc, p.FailureReason,
+                p.Description, p.CreatedByUserId, p.RequiredApprovals,
+                p.ReviewNotes, p.ReviewedAtUtc, p.FailureReason,
                 p.CreatedAtUtc, p.UpdatedAtUtc, p.RowVersion))
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -110,5 +113,6 @@ public sealed class GetPaymentByIdQueryHandler(IApplicationDbContext db)
 internal sealed record PaymentRow(
     Guid Id, string PaymentReference, Guid SourceAccountId, string SourceAccountNumber,
     Guid BeneficiaryId, string BeneficiaryName, decimal Amount, string Currency,
-    PaymentStatus Status, string? Description, string? ReviewNotes, DateTime? ReviewedAtUtc,
+    PaymentStatus Status, string? Description, string? CreatedByUserId, int RequiredApprovals,
+    string? ReviewNotes, DateTime? ReviewedAtUtc,
     string? FailureReason, DateTime CreatedAtUtc, DateTime? UpdatedAtUtc, byte[] RowVersion);

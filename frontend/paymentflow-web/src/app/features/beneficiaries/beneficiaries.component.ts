@@ -1,5 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -21,7 +22,7 @@ import { ConfirmDialogComponent, ConfirmDialogResult } from '../../shared/confir
   selector: 'pf-beneficiaries',
   standalone: true,
   imports: [
-    FormsModule, MatButtonModule, MatFormFieldModule, MatInputModule, MatMenuModule,
+    FormsModule, RouterLink, MatButtonModule, MatFormFieldModule, MatInputModule, MatMenuModule,
     MatSelectModule, MatSnackBarModule, MatDialogModule, StatusChipComponent, MaskedValueComponent
   ],
   templateUrl: './beneficiaries.component.html',
