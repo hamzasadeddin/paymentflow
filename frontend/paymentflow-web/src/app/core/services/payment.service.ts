@@ -39,6 +39,11 @@ export class PaymentService {
     return this.http.post<Payment>(`${this.base}/${id}/submit-for-approval`, {});
   }
 
+  /** Manually trigger settlement of an approved payment. */
+  process(id: string): Observable<Payment> {
+    return this.http.post<Payment>(`${this.base}/${id}/process`, {});
+  }
+
   cancel(id: string): Observable<Payment> {
     return this.http.post<Payment>(`${this.base}/${id}/cancel`, {});
   }

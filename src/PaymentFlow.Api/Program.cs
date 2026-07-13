@@ -7,6 +7,8 @@ using Microsoft.OpenApi.Models;
 using PaymentFlow.Api.Middleware;
 using PaymentFlow.Api.Services;
 using PaymentFlow.Api.Extensions;
+using PaymentFlow.Api.Hubs;
+using PaymentFlow.Api.Realtime;
 using PaymentFlow.Application;
 using PaymentFlow.Application.Abstractions;
 using PaymentFlow.Infrastructure;
@@ -30,6 +32,10 @@ try
     builder.Services.AddInfrastructure(builder.Configuration);
     builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
     builder.Services.AddApplicationAuthorization();
+
+    // Phase 05 — real-time payment status over SignalR.
+    builder.Services.AddSignalR();
+    builder.Services.AddScoped<IPaymentNotificationService, SignalRPaymentNotificationService>();
 
     builder.Services.AddControllers();
 
@@ -72,6 +78,9 @@ try
         .WithOrigins(allowedOrigins)
         .AllowAnyHeader()
         .AllowAnyMethod()
+        // AllowCredentials is required for the SignalR WebSocket connection; it is
+        // compatible with WithOrigins (specific origins), unlike AllowAnyOrigin.
+        .AllowCredentials()
         .WithExposedHeaders(CorrelationIdMiddleware.HeaderName)));
 
     builder.Services.AddHealthChecks()
@@ -126,6 +135,7 @@ try
     app.UseAuthorization();
 
     app.MapControllers();
+    app.MapHub<PaymentsHub>("/hubs/payments");
     app.MapHealthChecks("/health");
 
     // Integration tests use SQLite + EnsureCreated; migrations are SQL Server only.

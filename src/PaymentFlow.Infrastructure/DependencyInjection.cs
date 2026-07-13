@@ -1,14 +1,18 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using PaymentFlow.Application.Abstractions;
+using PaymentFlow.Application.Common;
 using PaymentFlow.Infrastructure.Approvals;
 using PaymentFlow.Infrastructure.Identity;
 using PaymentFlow.Infrastructure.Persistence;
+using PaymentFlow.Infrastructure.Processing;
 
 namespace PaymentFlow.Infrastructure;
 
@@ -69,6 +73,24 @@ public static class DependencyInjection
                     NameClaimType = "sub",
                     RoleClaimType = "role"
                 };
+
+                // WebSockets can't send an Authorization header on the handshake,
+                // so SignalR clients pass the token as a query-string parameter.
+                // Accept it only for hub endpoints.
+                options.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = context =>
+                    {
+                        var accessToken = context.Request.Query["access_token"];
+                        if (!string.IsNullOrEmpty(accessToken)
+                            && context.HttpContext.Request.Path.StartsWithSegments("/hubs"))
+                        {
+                            context.Token = accessToken;
+                        }
+
+                        return Task.CompletedTask;
+                    }
+                };
             });
 
         services.AddAuthorization();
@@ -83,6 +105,12 @@ public static class DependencyInjection
         services.Configure<ApprovalPolicyOptions>(
             configuration.GetSection(ApprovalPolicyOptions.SectionName));
         services.AddScoped<IApprovalPolicyProvider, ApprovalPolicyProvider>();
+
+        // Phase 05 — simulated payment processing.
+        services.Configure<ProcessingOptions>(
+            configuration.GetSection(ProcessingOptions.SectionName));
+        services.AddScoped<ISettlementSimulator, DeterministicSettlementSimulator>();
+        services.AddHostedService<PaymentProcessingWorker>();
 
         return services;
     }

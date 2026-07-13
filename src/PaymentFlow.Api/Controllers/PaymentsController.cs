@@ -76,6 +76,11 @@ public sealed class PaymentsController(ISender sender, ICurrentUserService curre
     public async Task<IActionResult> Cancel(Guid paymentId, CancellationToken cancellationToken)
         => (await sender.Send(new CancelPaymentCommand(paymentId), cancellationToken)).ToActionResult(this);
 
+    [HttpPost("{paymentId:guid}/process")]
+    [Authorize(Policy = AuthorizationPolicies.CanManagePayments)]
+    public async Task<IActionResult> Process(Guid paymentId, CancellationToken cancellationToken)
+        => (await sender.Send(new ProcessPaymentCommand(paymentId), cancellationToken)).ToActionResult(this);
+
     [HttpPost("{paymentId:guid}/approve")]
     [Authorize(Policy = AuthorizationPolicies.CanApprovePayments)]
     public async Task<IActionResult> Approve(

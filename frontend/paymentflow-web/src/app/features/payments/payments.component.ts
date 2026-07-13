@@ -1,4 +1,5 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -10,6 +11,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { PaymentService } from '../../core/services/payment.service';
+import { PaymentsHubService } from '../../core/realtime/payments-hub.service';
 import { AuthService } from '../../core/services/auth.service';
 import { Payment, PaymentStatus } from '../../core/models/payment.models';
 import { AppRoles, ApiError } from '../../core/models/auth.models';
@@ -31,9 +33,11 @@ import { ConfirmDialogComponent, ConfirmDialogResult } from '../../shared/confir
 })
 export class PaymentsComponent {
   private readonly service = inject(PaymentService);
+  private readonly hub = inject(PaymentsHubService);
   private readonly auth = inject(AuthService);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly state = signal<LoadState>('idle');
   readonly error = signal<ApiError | null>(null);
@@ -55,6 +59,15 @@ export class PaymentsComponent {
 
   constructor() {
     this.load();
+
+    // Live status: reflect server-pushed transitions in the current page without a reload.
+    this.hub.ensureStarted();
+    this.hub.changes$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(change => {
+      this.payments.update(list => list.map(p =>
+        p.id === change.paymentId
+          ? { ...p, status: change.status, failureReason: change.failureReason }
+          : p));
+    });
   }
 
   load(): void {
@@ -83,8 +96,18 @@ export class PaymentsComponent {
   hasActions(p: Payment): boolean {
     const manageable = this.canManage()
       && (p.status === PaymentStatus.Draft || p.status === PaymentStatus.PendingApproval);
+    const processable = this.canManage() && p.status === PaymentStatus.Approved;
     const reviewable = this.canApprove() && p.status === PaymentStatus.PendingApproval;
-    return manageable || reviewable;
+    return manageable || processable || reviewable;
+  }
+
+  process(p: Payment): void {
+    this.confirm({
+      title: 'Process payment',
+      message: `Settle "${p.paymentReference}" (${p.amount} ${p.currency} to ${p.beneficiaryName}) now?`,
+      confirmLabel: 'Process',
+      tone: 'primary'
+    }, () => this.service.process(p.id), `${p.paymentReference} processed`);
   }
 
   changePage(delta: number): void {

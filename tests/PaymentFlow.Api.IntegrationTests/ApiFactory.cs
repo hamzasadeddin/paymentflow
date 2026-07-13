@@ -46,7 +46,14 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
                 // Pin approval thresholds so tests are deterministic: every payment
                 // needs >= 1 approver (no auto band), and >= 5000 needs two.
                 ["ApprovalPolicy:AutoApproveBelow"] = "0",
-                ["ApprovalPolicy:DualApprovalAtOrAbove"] = "5000"
+                ["ApprovalPolicy:DualApprovalAtOrAbove"] = "5000",
+                // Keep settlement deterministic and instant by default: the background
+                // worker is off (tests drive processing explicitly) and there is no
+                // simulated latency. The dedicated worker test re-enables it.
+                ["Processing:AutoProcessEnabled"] = "false",
+                ["Processing:SimulatedLatencyMsMin"] = "0",
+                ["Processing:SimulatedLatencyMsMax"] = "0",
+                ["Processing:FailOnCents"] = "13"
             }));
 
         builder.ConfigureServices(services =>

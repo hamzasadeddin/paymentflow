@@ -24,6 +24,8 @@ public static class SecurityEventTypes
 
     public const string PaymentApproved = "PaymentApproved";
     public const string PaymentRejected = "PaymentRejected";
+    public const string PaymentCompleted = "PaymentCompleted";
+    public const string PaymentFailed = "PaymentFailed";
     public const string BeneficiaryApproved = "BeneficiaryApproved";
     public const string BeneficiaryRejected = "BeneficiaryRejected";
 }

@@ -76,7 +76,10 @@
               <td>{{ p.beneficiaryName }}</td>
               <td class="right mono">{{ p.amount | number:'1.2-2' }} {{ p.currency }}</td>
               <td>
-                <pf-status-chip [label]="statusDisplay(p.status).label" [tone]="statusDisplay(p.status).tone" />
+                <pf-status-chip
+                  [label]="statusDisplay(p.status).label"
+                  [tone]="statusDisplay(p.status).tone"
+                  [hint]="p.failureReason" />
               </td>
               <td class="right">
                 @if (canManage() || canApprove()) {
@@ -92,6 +95,11 @@
                     @if (canManage() && (p.status === PaymentStatus.Draft || p.status === PaymentStatus.PendingApproval)) {
                       <button mat-menu-item (click)="cancel(p)">
                         <span class="material-symbols-outlined">block</span> Cancel
+                      </button>
+                    }
+                    @if (canManage() && p.status === PaymentStatus.Approved) {
+                      <button mat-menu-item (click)="process(p)">
+                        <span class="material-symbols-outlined">bolt</span> Process now
                       </button>
                     }
                     @if (canApprove() && p.status === PaymentStatus.PendingApproval) {
