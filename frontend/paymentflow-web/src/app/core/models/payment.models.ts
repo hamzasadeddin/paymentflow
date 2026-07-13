@@ -9,6 +9,16 @@ export enum PaymentStatus {
   Rejected = 8
 }
 
+export interface PaymentStatusCount {
+  status: PaymentStatus;
+  count: number;
+}
+
+export interface PaymentStatusSummary {
+  total: number;
+  counts: PaymentStatusCount[];
+}
+
 export interface Payment {
   id: string;
   paymentReference: string;

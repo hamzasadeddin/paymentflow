@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { PagedQuery, PagedResult } from '../models/paged.models';
-import { CreatePaymentRequest, Payment, PaymentStatus } from '../models/payment.models';
+import { CreatePaymentRequest, Payment, PaymentStatus, PaymentStatusSummary } from '../models/payment.models';
 
 @Injectable({ providedIn: 'root' })
 export class PaymentService {
@@ -26,6 +26,11 @@ export class PaymentService {
 
   get(id: string): Observable<Payment> {
     return this.http.get<Payment>(`${this.base}/${id}`);
+  }
+
+  /** Payment counts by status, for the dashboard overview. */
+  statusSummary(): Observable<PaymentStatusSummary> {
+    return this.http.get<PaymentStatusSummary>(`${this.base}/summary`);
   }
 
   create(request: CreatePaymentRequest): Observable<Payment> {

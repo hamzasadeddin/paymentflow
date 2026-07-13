@@ -46,6 +46,12 @@ public sealed class PaymentsController(ISender sender, ICurrentUserService curre
     public async Task<IActionResult> GetPayment(Guid paymentId, CancellationToken cancellationToken)
         => (await sender.Send(new GetPaymentByIdQuery(paymentId), cancellationToken)).ToActionResult(this);
 
+    /// <summary>Payment counts by status, for the dashboard overview.</summary>
+    [HttpGet("summary")]
+    [Authorize(Policy = AuthorizationPolicies.CanReadOperations)]
+    public async Task<IActionResult> GetSummary(CancellationToken cancellationToken)
+        => (await sender.Send(new GetPaymentStatusSummaryQuery(), cancellationToken)).ToActionResult(this);
+
     [HttpPost]
     [Authorize(Policy = AuthorizationPolicies.CanManagePayments)]
     public async Task<IActionResult> CreatePayment(
