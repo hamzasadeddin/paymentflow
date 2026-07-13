@@ -74,21 +74,45 @@ public static class DemoDataSeeder
         var now = DateTime.UtcNow;
         var decisions = new List<ApprovalDecision>();
 
+        // Approved to Gulf Freight — carries a compliance hold below, so it is
+        // visibly held from settlement (the worker skips it) until cleared.
+        var approvedFreight = NewPayment(cedarAed, gulfFreight, 5000.00m, "PAY-2026-000003",
+            PaymentStatus.Approved, now, "Freight settlement", analystId, approvers, decisions);
+
         db.Payments.AddRange(
             NewPayment(laylaJod, ammanUtilities, 250.00m, "PAY-2026-000001", PaymentStatus.Draft, now, "Monthly utilities", analystId, approvers, decisions),
             NewPayment(northwindUsd, pacificSuppliers, 1200.00m, "PAY-2026-000002", PaymentStatus.PendingApproval, now, "Supplier invoice #4471", analystId, approvers, decisions),
-            NewPayment(cedarAed, gulfFreight, 5000.00m, "PAY-2026-000003", PaymentStatus.Approved, now, "Freight settlement", analystId, approvers, decisions),
+            approvedFreight,
             NewPayment(northwindUsd, pacificSuppliers, 800.00m, "PAY-2026-000004", PaymentStatus.Completed, now, "Parts order", analystId, approvers, decisions),
-            NewPayment(laylaJod, ammanUtilities, 1500.00m, "PAY-2026-000005", PaymentStatus.Rejected, now, "Duplicate request", analystId, approvers, decisions));
+            NewPayment(laylaJod, ammanUtilities, 1500.00m, "PAY-2026-000005", PaymentStatus.Rejected, now, "Duplicate request", analystId, approvers, decisions),
+            // A second Completed payment (ref not ending in 4) so a first-run
+            // reconciliation shows all three break types, not just two. Kept
+            // contiguous with the sequence below — CreatePaymentCommand derives the
+            // next reference from the payment COUNT, so gaps would collide.
+            NewPayment(northwindUsd, pacificSuppliers, 1750.00m, "PAY-2026-000006", PaymentStatus.Completed, now, "Warehouse fittings", analystId, approvers, decisions));
 
         // A dual-control payment awaiting its second approver (1 of 2) — populates
         // the Approvals queue with a partially-approved item on first run.
-        var dualPending = NewPayment(cedarAed, gulfFreight, 6000.00m, "PAY-2026-000006",
+        var dualPending = NewPayment(cedarAed, gulfFreight, 6000.00m, "PAY-2026-000007",
             PaymentStatus.PendingApproval, now, "Equipment purchase (dual approval)", analystId, approvers, decisions);
         db.Payments.Add(dualPending);
         decisions.Add(Decision(dualPending.Id, approvers[0], ApprovalOutcome.Approved, "First approval recorded", now));
 
         db.ApprovalDecisions.AddRange(decisions);
+
+        // A seeded OPEN compliance hold on the approved Gulf Freight payment, so
+        // the Compliance queue is populated on first run and that payment cannot
+        // settle until an officer clears it. Curated directly (like the seeded
+        // payment states) rather than run through the screening service.
+        db.ComplianceCases.Add(new ComplianceCase
+        {
+            PaymentId = approvedFreight.Id,
+            PaymentReference = approvedFreight.PaymentReference,
+            Category = ComplianceCategory.Sanctions,
+            Reason = "Beneficiary \"Gulf Freight Services\" matched the watchlist term \"Gulf Freight\".",
+            RaisedByUserId = null,
+            CreatedAtUtc = now
+        });
 
         await db.SaveChangesAsync();
         logger.LogInformation(

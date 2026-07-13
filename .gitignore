@@ -485,3 +485,7 @@ $RECYCLE.BIN/
 node_modules/
 frontend/paymentflow-web/dist/
 frontend/paymentflow-web/.angular/
+
+# Angular
+.angular/
+frontend/paymentflow-web/dist/

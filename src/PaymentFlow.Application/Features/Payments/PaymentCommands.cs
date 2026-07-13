@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using PaymentFlow.Application.Abstractions;
 using PaymentFlow.Application.Common;
 using PaymentFlow.Domain.Entities;
@@ -10,9 +11,12 @@ namespace PaymentFlow.Application.Features.Payments;
 public record SubmitPaymentCommand(Guid PaymentId) : IRequest<Result<PaymentDto>>;
 
 public sealed class SubmitPaymentCommandHandler(
-    IApplicationDbContext db, IDateTimeProvider clock, IApprovalPolicyProvider policy)
+    IApplicationDbContext db, IDateTimeProvider clock, IApprovalPolicyProvider policy,
+    IComplianceScreeningService screening, IOptions<ScreeningOptions> screeningOptions)
     : IRequestHandler<SubmitPaymentCommand, Result<PaymentDto>>
 {
+    private readonly ScreeningOptions _screening = screeningOptions.Value;
+
     public async Task<Result<PaymentDto>> Handle(
         SubmitPaymentCommand request, CancellationToken cancellationToken)
     {
@@ -79,6 +83,33 @@ public sealed class SubmitPaymentCommandHandler(
                 Details = $"{payment.PaymentReference} auto-approved (amount below approval threshold).",
                 OccurredAtUtc = clock.UtcNow
             });
+        }
+
+        // Compliance screening: a flag raises an OPEN hold that gates settlement.
+        // Screening is independent of approval — the payment still flows through
+        // maker-checker; the hold only bites when the payment tries to process.
+        if (_screening.AutoScreenOnSubmit && payment.Beneficiary is not null)
+        {
+            var screen = screening.Screen(payment, payment.Beneficiary);
+            if (screen.Flagged)
+            {
+                db.ComplianceCases.Add(new ComplianceCase
+                {
+                    PaymentId = payment.Id,
+                    PaymentReference = payment.PaymentReference,
+                    Category = screen.Category,
+                    Reason = screen.Reason,
+                    RaisedByUserId = null, // automatic screen
+                    CreatedAtUtc = clock.UtcNow
+                });
+                db.SecurityAuditEvents.Add(new SecurityAuditEvent
+                {
+                    EventType = SecurityEventTypes.ComplianceHoldPlaced,
+                    Succeeded = true,
+                    Details = $"{payment.PaymentReference} held for compliance review: {screen.Reason}",
+                    OccurredAtUtc = clock.UtcNow
+                });
+            }
         }
 
         try

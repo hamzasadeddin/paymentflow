@@ -47,8 +47,16 @@ export const routes: Routes = [
       {
         path: 'approvals',
         loadComponent: () => import('./features/approvals/approvals.component').then(m => m.ApprovalsComponent)
+      },
+      {
+        path: 'compliance',
+        loadComponent: () => import('./features/compliance/compliance.component').then(m => m.ComplianceComponent)
+      },
+      {
+        path: 'reconciliation',
+        loadComponent: () => import('./features/reconciliation/reconciliation.component').then(m => m.ReconciliationComponent)
       }
-      // Future phases: compliance, reconciliation, audit-logs, admin.
+      // Future phases: audit-logs, admin.
     ]
   },
   { path: '**', redirectTo: '' }

@@ -1,6 +1,8 @@
 import { AccountStatus, CustomerStatus } from '../core/models/customer.models';
 import { BeneficiaryStatus } from '../core/models/beneficiary.models';
 import { PaymentStatus } from '../core/models/payment.models';
+import { ComplianceCaseStatus, ComplianceCategory } from '../core/models/compliance.models';
+import { BreakStatus, BreakType } from '../core/models/reconciliation.models';
 
 type Tone = 'neutral' | 'success' | 'warning' | 'danger' | 'info';
 interface Display { label: string; tone: Tone; }
@@ -36,3 +38,27 @@ export const paymentStatusDisplay = (s: PaymentStatus): Display => ({
 }[s]);
 
 export const customerTypeLabel = (t: number): string => (t === 2 ? 'Business' : 'Individual');
+
+export const complianceStatusDisplay = (s: ComplianceCaseStatus): Display => ({
+  [ComplianceCaseStatus.Open]: { label: 'Open', tone: 'warning' as Tone },
+  [ComplianceCaseStatus.Cleared]: { label: 'Cleared', tone: 'success' as Tone },
+  [ComplianceCaseStatus.Rejected]: { label: 'Rejected', tone: 'danger' as Tone }
+}[s]);
+
+export const complianceCategoryLabel = (c: ComplianceCategory): string => ({
+  [ComplianceCategory.Sanctions]: 'Sanctions',
+  [ComplianceCategory.Limit]: 'Limit',
+  [ComplianceCategory.Manual]: 'Manual'
+}[c]);
+
+export const breakStatusDisplay = (s: BreakStatus): Display => ({
+  [BreakStatus.Open]: { label: 'Open', tone: 'warning' as Tone },
+  [BreakStatus.Resolved]: { label: 'Resolved', tone: 'success' as Tone },
+  [BreakStatus.Ignored]: { label: 'Ignored', tone: 'neutral' as Tone }
+}[s]);
+
+export const breakTypeLabel = (t: BreakType): string => ({
+  [BreakType.MissingFromStatement]: 'Missing from statement',
+  [BreakType.MissingFromLedger]: 'Missing from ledger',
+  [BreakType.AmountMismatch]: 'Amount mismatch'
+}[t]);

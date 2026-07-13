@@ -15,6 +15,9 @@ public interface IApplicationDbContext
     DbSet<Payment> Payments { get; }
     DbSet<ApprovalDecision> ApprovalDecisions { get; }
     DbSet<SecurityAuditEvent> SecurityAuditEvents { get; }
+    DbSet<ComplianceCase> ComplianceCases { get; }
+    DbSet<ReconciliationRun> ReconciliationRuns { get; }
+    DbSet<ReconciliationBreak> ReconciliationBreaks { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }

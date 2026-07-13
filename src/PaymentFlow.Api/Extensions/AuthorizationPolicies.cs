@@ -16,6 +16,8 @@ public static class AuthorizationPolicies
     public const string CanRevealAccountNumbers = "CanRevealAccountNumbers";
     public const string CanManagePayments = "CanManagePayments";
     public const string CanApprovePayments = "CanApprovePayments";
+    public const string CanManageCompliance = "CanManageCompliance";
+    public const string CanReconcile = "CanReconcile";
 
     public static IServiceCollection AddApplicationAuthorization(this IServiceCollection services)
     {
@@ -35,7 +37,13 @@ public static class AuthorizationPolicies
             .AddPolicy(CanManagePayments, p => p.RequireRole(
                 Roles.Administrator, Roles.OperationsAnalyst))
             .AddPolicy(CanApprovePayments, p => p.RequireRole(
-                Roles.Administrator, Roles.PaymentApprover));
+                Roles.Administrator, Roles.PaymentApprover))
+            // Compliance officers (and admins) clear/reject holds and reveal numbers.
+            .AddPolicy(CanManageCompliance, p => p.RequireRole(
+                Roles.Administrator, Roles.ComplianceOfficer))
+            // Reconciliation is an operations + compliance activity.
+            .AddPolicy(CanReconcile, p => p.RequireRole(
+                Roles.Administrator, Roles.ComplianceOfficer, Roles.OperationsAnalyst));
 
         return services;
     }

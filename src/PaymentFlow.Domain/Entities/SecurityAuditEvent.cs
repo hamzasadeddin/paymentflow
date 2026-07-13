@@ -28,4 +28,12 @@ public static class SecurityEventTypes
     public const string PaymentFailed = "PaymentFailed";
     public const string BeneficiaryApproved = "BeneficiaryApproved";
     public const string BeneficiaryRejected = "BeneficiaryRejected";
+
+    // Phase 06 — compliance & reconciliation.
+    public const string ComplianceHoldPlaced = "ComplianceHoldPlaced";
+    public const string ComplianceHoldCleared = "ComplianceHoldCleared";
+    public const string ComplianceHoldRejected = "ComplianceHoldRejected";
+    public const string ReconciliationRunCompleted = "ReconciliationRunCompleted";
+    public const string ReconciliationBreakResolved = "ReconciliationBreakResolved";
+    public const string ReconciliationBreakIgnored = "ReconciliationBreakIgnored";
 }

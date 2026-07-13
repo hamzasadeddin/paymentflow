@@ -17,6 +17,9 @@ public class PaymentFlowDbContext(DbContextOptions<PaymentFlowDbContext> options
     public DbSet<Beneficiary> Beneficiaries => Set<Beneficiary>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<ApprovalDecision> ApprovalDecisions => Set<ApprovalDecision>();
+    public DbSet<ComplianceCase> ComplianceCases => Set<ComplianceCase>();
+    public DbSet<ReconciliationRun> ReconciliationRuns => Set<ReconciliationRun>();
+    public DbSet<ReconciliationBreak> ReconciliationBreaks => Set<ReconciliationBreak>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

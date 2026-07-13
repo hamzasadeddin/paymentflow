@@ -10,9 +10,11 @@ using Microsoft.IdentityModel.Tokens;
 using PaymentFlow.Application.Abstractions;
 using PaymentFlow.Application.Common;
 using PaymentFlow.Infrastructure.Approvals;
+using PaymentFlow.Infrastructure.Compliance;
 using PaymentFlow.Infrastructure.Identity;
 using PaymentFlow.Infrastructure.Persistence;
 using PaymentFlow.Infrastructure.Processing;
+using PaymentFlow.Infrastructure.Reconciliation;
 
 namespace PaymentFlow.Infrastructure;
 
@@ -111,6 +113,14 @@ public static class DependencyInjection
             configuration.GetSection(ProcessingOptions.SectionName));
         services.AddScoped<ISettlementSimulator, DeterministicSettlementSimulator>();
         services.AddHostedService<PaymentProcessingWorker>();
+
+        // Phase 06 — compliance & reconciliation.
+        services.Configure<ScreeningOptions>(
+            configuration.GetSection(ScreeningOptions.SectionName));
+        services.AddScoped<IComplianceScreeningService, RuleBasedComplianceScreeningService>();
+        services.Configure<ReconciliationOptions>(
+            configuration.GetSection(ReconciliationOptions.SectionName));
+        services.AddScoped<IExternalStatementProvider, SimulatedStatementProvider>();
 
         return services;
     }

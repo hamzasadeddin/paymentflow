@@ -66,8 +66,15 @@ public sealed class PaymentProcessingWorker(
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
 
         var batchSize = Math.Max(1, _options.BatchSize);
+
+        // Skip payments held for compliance (open or rejected case): the manual
+        // ProcessPaymentCommand would reject them anyway, so don't churn on them.
+        var blockedPaymentIds = db.ComplianceCases
+            .Where(c => c.Status == ComplianceCaseStatus.Open || c.Status == ComplianceCaseStatus.Rejected)
+            .Select(c => c.PaymentId);
+
         var approvedIds = await db.Payments
-            .Where(p => p.Status == PaymentStatus.Approved)
+            .Where(p => p.Status == PaymentStatus.Approved && !blockedPaymentIds.Contains(p.Id))
             .OrderBy(p => p.CreatedAtUtc)
             .Select(p => p.Id)
             .Take(batchSize)

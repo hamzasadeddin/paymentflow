@@ -36,6 +36,17 @@ public sealed class ProcessPaymentCommandHandler(
         if (payment is null)
             return Result.Failure<PaymentDto>(Error.NotFound("payment.notFound", "Payment not found."));
 
+        // ---- Compliance gate. ----
+        // A payment with an open or rejected compliance hold cannot settle. This
+        // sits ahead of the RowVersion claim so no state flip is even attempted.
+        var onHold = await db.ComplianceCases.AsNoTracking()
+            .AnyAsync(c => c.PaymentId == payment.Id
+                && (c.Status == ComplianceCaseStatus.Open || c.Status == ComplianceCaseStatus.Rejected),
+                cancellationToken);
+        if (onHold)
+            return Result.Failure<PaymentDto>(Error.Conflict("payment.onComplianceHold",
+                "This payment is on a compliance hold and cannot be settled until it is cleared."));
+
         // ---- Phase 1: claim the payment by flipping Approved -> Processing. ----
         // This save is the atomic claim: if the worker and the manual endpoint
         // (or two worker ticks) race, only one wins the RowVersion check; the
