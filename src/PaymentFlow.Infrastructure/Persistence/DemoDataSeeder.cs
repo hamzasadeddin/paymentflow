@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using PaymentFlow.Domain.Entities;
+using PaymentFlow.Application.Common;
 using PaymentFlow.Infrastructure.Approvals;
 using PaymentFlow.Infrastructure.Identity;
 

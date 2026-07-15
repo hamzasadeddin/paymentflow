@@ -1,10 +1,11 @@
-namespace PaymentFlow.Infrastructure.Approvals;
+namespace PaymentFlow.Application.Common;
 
 /// <summary>
 /// Approval thresholds, bound from the <c>ApprovalPolicy</c> configuration
 /// section. Amounts are compared in the payment's own currency (a deliberate
 /// demo simplification, consistent with the no-FX stance elsewhere). Phase 07
-/// will move these into an admin-editable store.
+/// makes these admin-editable via the rule-settings store, with these
+/// config-bound values as the fallback.
 /// </summary>
 public sealed class ApprovalPolicyOptions
 {

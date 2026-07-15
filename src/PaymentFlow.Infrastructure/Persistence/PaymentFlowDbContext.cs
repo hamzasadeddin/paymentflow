@@ -20,6 +20,7 @@ public class PaymentFlowDbContext(DbContextOptions<PaymentFlowDbContext> options
     public DbSet<ComplianceCase> ComplianceCases => Set<ComplianceCase>();
     public DbSet<ReconciliationRun> ReconciliationRuns => Set<ReconciliationRun>();
     public DbSet<ReconciliationBreak> ReconciliationBreaks => Set<ReconciliationBreak>();
+    public DbSet<RuleSetting> RuleSettings => Set<RuleSetting>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

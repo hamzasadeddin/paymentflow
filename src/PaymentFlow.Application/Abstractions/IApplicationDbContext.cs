@@ -18,6 +18,7 @@ public interface IApplicationDbContext
     DbSet<ComplianceCase> ComplianceCases { get; }
     DbSet<ReconciliationRun> ReconciliationRuns { get; }
     DbSet<ReconciliationBreak> ReconciliationBreaks { get; }
+    DbSet<RuleSetting> RuleSettings { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }

@@ -11,6 +11,7 @@ using PaymentFlow.Application.Abstractions;
 using PaymentFlow.Application.Common;
 using PaymentFlow.Infrastructure.Approvals;
 using PaymentFlow.Infrastructure.Compliance;
+using PaymentFlow.Infrastructure.Configuration;
 using PaymentFlow.Infrastructure.Identity;
 using PaymentFlow.Infrastructure.Persistence;
 using PaymentFlow.Infrastructure.Processing;
@@ -100,6 +101,11 @@ public static class DependencyInjection
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddScoped<IUserLookupService, UserLookupService>();
+        services.AddScoped<IUserAdminService, UserAdminService>();
+
+        // Phase 07 — admin-editable rule store, read behind IRuleSettingsProvider
+        // (effective = stored override, else the config-bound fallback below).
+        services.AddScoped<IRuleSettingsProvider, RuleSettingsProvider>();
 
         services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<PaymentFlowDbContext>());
         services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();

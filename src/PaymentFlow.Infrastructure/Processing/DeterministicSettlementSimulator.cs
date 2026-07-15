@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Options;
 using PaymentFlow.Application.Abstractions;
 using PaymentFlow.Application.Common;
 using PaymentFlow.Domain.Entities;
@@ -6,21 +5,29 @@ using PaymentFlow.Domain.Entities;
 namespace PaymentFlow.Infrastructure.Processing;
 
 /// <summary>
-/// Config-backed <see cref="ISettlementSimulator"/>. A payment fails settlement
-/// iff the cents component of its amount equals the configured sentinel
-/// (default 13) — a pure, reproducible rule that is trivial to trigger in a demo
-/// (e.g. an amount of 250.13). The pure rule is exposed as a static so it can be
-/// reused (e.g. by the demo seeder) with the defaults.
+/// <see cref="ISettlementSimulator"/> backed by the admin-editable rule store with
+/// the <c>appsettings</c>-bound <see cref="ProcessingOptions"/> as the fallback
+/// (Phase 07). A payment fails settlement iff the cents component of its amount
+/// equals the configured sentinel (default 13) — a pure, reproducible rule that is
+/// trivial to trigger in a demo (e.g. 250.13). Because this runs per-payment inside
+/// a request scope, an admin change to the failure sentinel takes effect
+/// immediately. The pure rule stays a static so it can be reused (e.g. by the demo
+/// seeder) with the defaults.
 /// </summary>
-public sealed class DeterministicSettlementSimulator(IOptions<ProcessingOptions> options) : ISettlementSimulator
+public sealed class DeterministicSettlementSimulator(
+    IRuleSettingsProvider rules,
+    Microsoft.Extensions.Options.IOptions<ProcessingOptions> configFallback) : ISettlementSimulator
 {
-    private readonly ProcessingOptions _options = options.Value;
+    private readonly ProcessingOptions _configFallback = configFallback.Value;
 
     public SettlementDecision Decide(Payment payment)
-        => WouldFail(payment.Amount, _options.FailOnCents)
+    {
+        var options = rules.GetEffective(ProcessingOptions.SectionName, _configFallback);
+        return WouldFail(payment.Amount, options.FailOnCents)
             ? SettlementDecision.Failure(
-                $"Simulated settlement failure (deterministic rule: cents == {_options.FailOnCents}).")
+                $"Simulated settlement failure (deterministic rule: cents == {options.FailOnCents}).")
             : SettlementDecision.Success();
+    }
 
     /// <summary>
     /// True when the amount's cents component equals <paramref name="failOnCents"/>.

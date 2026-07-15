@@ -36,4 +36,12 @@ public static class SecurityEventTypes
     public const string ReconciliationRunCompleted = "ReconciliationRunCompleted";
     public const string ReconciliationBreakResolved = "ReconciliationBreakResolved";
     public const string ReconciliationBreakIgnored = "ReconciliationBreakIgnored";
+
+    // Phase 07 — administration.
+    public const string UserCreated = "UserCreated";
+    public const string UserActivated = "UserActivated";
+    public const string UserDeactivated = "UserDeactivated";
+    public const string UserRolesChanged = "UserRolesChanged";
+    public const string UserPasswordReset = "UserPasswordReset";
+    public const string RuleSetUpdated = "RuleSetUpdated";
 }

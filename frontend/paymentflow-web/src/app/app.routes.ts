@@ -1,5 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
+import { roleGuard } from './core/guards/role.guard';
+import { AppRoles } from './core/models/auth.models';
 
 export const routes: Routes = [
   {
@@ -55,8 +57,19 @@ export const routes: Routes = [
       {
         path: 'reconciliation',
         loadComponent: () => import('./features/reconciliation/reconciliation.component').then(m => m.ReconciliationComponent)
+      },
+      {
+        path: 'audit-logs',
+        canActivate: [roleGuard],
+        data: { roles: [AppRoles.Administrator, AppRoles.ComplianceOfficer, AppRoles.ReadOnlyAuditor] },
+        loadComponent: () => import('./features/audit-logs/audit-logs.component').then(m => m.AuditLogsComponent)
+      },
+      {
+        path: 'admin',
+        canActivate: [roleGuard],
+        data: { roles: [AppRoles.Administrator] },
+        loadComponent: () => import('./features/admin/admin.component').then(m => m.AdminComponent)
       }
-      // Future phases: audit-logs, admin.
     ]
   },
   { path: '**', redirectTo: '' }

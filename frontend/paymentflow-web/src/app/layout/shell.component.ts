@@ -1,14 +1,17 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
 import { AuthService } from '../core/services/auth.service';
+import { AppRoles } from '../core/models/auth.models';
 
 interface NavItem {
   label: string;
   icon: string;
   route: string;
   enabled: boolean;
+  /** When set, the item only shows for users holding at least one of these roles. */
+  roles?: string[];
 }
 
 @Component({
@@ -23,7 +26,7 @@ interface NavItem {
           @if (!collapsed()) { <span class="brand-name">PaymentFlow</span> }
         </div>
         <nav>
-          @for (item of navItems; track item.route) {
+          @for (item of visibleItems(); track item.route) {
             @if (item.enabled) {
               <a class="nav-item" [routerLink]="item.route" routerLinkActive="active">
                 <span class="material-symbols-outlined">{{ item.icon }}</span>
@@ -115,9 +118,15 @@ export class ShellComponent {
     { label: 'Approvals', icon: 'task_alt', route: '/approvals', enabled: true },
     { label: 'Compliance', icon: 'policy', route: '/compliance', enabled: true },
     { label: 'Reconciliation', icon: 'balance', route: '/reconciliation', enabled: true },
-    { label: 'Audit logs', icon: 'history', route: '/audit-logs', enabled: false },
-    { label: 'Administration', icon: 'settings', route: '/admin', enabled: false }
+    { label: 'Audit logs', icon: 'history', route: '/audit-logs', enabled: true,
+      roles: [AppRoles.Administrator, AppRoles.ComplianceOfficer, AppRoles.ReadOnlyAuditor] },
+    { label: 'Administration', icon: 'settings', route: '/admin', enabled: true,
+      roles: [AppRoles.Administrator] }
   ];
+
+  /** Hide items the current user's roles can't reach (the route guard also enforces this). */
+  readonly visibleItems = computed(() =>
+    this.navItems.filter(item => !item.roles || this.auth.hasAnyRole(item.roles)));
 
   logout(): void {
     this.auth.logout().subscribe({

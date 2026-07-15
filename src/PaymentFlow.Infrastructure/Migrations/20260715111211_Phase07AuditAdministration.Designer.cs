@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PaymentFlow.Infrastructure.Persistence;
 
@@ -11,9 +12,11 @@ using PaymentFlow.Infrastructure.Persistence;
 namespace PaymentFlow.Infrastructure.Migrations
 {
     [DbContext(typeof(PaymentFlowDbContext))]
-    partial class PaymentFlowDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260715111211_Phase07AuditAdministration")]
+    partial class Phase07AuditAdministration
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

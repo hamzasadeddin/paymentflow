@@ -18,6 +18,8 @@ public static class AuthorizationPolicies
     public const string CanApprovePayments = "CanApprovePayments";
     public const string CanManageCompliance = "CanManageCompliance";
     public const string CanReconcile = "CanReconcile";
+    public const string CanReadAuditLog = "CanReadAuditLog";
+    public const string CanAdminister = "CanAdminister";
 
     public static IServiceCollection AddApplicationAuthorization(this IServiceCollection services)
     {
@@ -43,7 +45,13 @@ public static class AuthorizationPolicies
                 Roles.Administrator, Roles.ComplianceOfficer))
             // Reconciliation is an operations + compliance activity.
             .AddPolicy(CanReconcile, p => p.RequireRole(
-                Roles.Administrator, Roles.ComplianceOfficer, Roles.OperationsAnalyst));
+                Roles.Administrator, Roles.ComplianceOfficer, Roles.OperationsAnalyst))
+            // The audit trail is for oversight: admins, compliance, and the
+            // read-only auditor — deliberately narrower than CanReadOperations.
+            .AddPolicy(CanReadAuditLog, p => p.RequireRole(
+                Roles.Administrator, Roles.ComplianceOfficer, Roles.ReadOnlyAuditor))
+            // Administration (users + rules) is administrator-only.
+            .AddPolicy(CanAdminister, p => p.RequireRole(Roles.Administrator));
 
         return services;
     }
